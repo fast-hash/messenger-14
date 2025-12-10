@@ -68,6 +68,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    forceTrustNextDevice: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     versionKey: false,

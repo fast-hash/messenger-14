@@ -28,6 +28,7 @@ import {
   listUsers as listUsersAdmin,
   disableUser as disableUserAdmin,
   enableUser as enableUserAdmin,
+  resetDeviceTrust as resetDeviceTrustAdmin,
   listRegistrationRequests,
   approveRegistrationRequest,
   rejectRegistrationRequest,
@@ -153,11 +154,15 @@ const ChatsPage = () => {
     );
   }, [selectedChat, user?.id]);
 
+  const isDeviceTrusted = device?.status === 'trusted';
+  const deviceBlockedNotice =
+    'Это устройство не доверено. Просмотр и отправка сообщений заблокированы, пока вы не отметите его как доверенное в разделе "Устройства" или администратор не выполнит сброс доверия.';
+
   useEffect(() => {
-    if (selectedChatId && !messages[selectedChatId]) {
+    if (selectedChatId && !messages[selectedChatId] && isDeviceTrusted) {
       loadMessages(selectedChatId);
     }
-  }, [selectedChatId, messages, loadMessages, isRemovedFromSelectedGroup]);
+  }, [selectedChatId, messages, loadMessages, isRemovedFromSelectedGroup, isDeviceTrusted]);
 
   const typingUsers = useMemo(() => typing[selectedChatId] || [], [typing, selectedChatId]);
   const canCreateGroup = user && user.role === 'admin';
@@ -351,6 +356,20 @@ const ChatsPage = () => {
     });
   };
 
+  const handleResetDeviceTrust = (targetUser) => {
+    const name = targetUser.displayName || targetUser.username || targetUser.email;
+    openConfirm(`Разрешить доверенное подключение для следующего устройства пользователя ${name}?`, async () => {
+      try {
+        await resetDeviceTrustAdmin(targetUser.id);
+        await loadAdminUsers();
+        setManagementNotice(`Для пользователя ${name} сброшены ограничения на доверенное устройство`);
+      } catch (error) {
+        // eslint-disable-next-line no-alert
+        alert('Не удалось обновить статус доверия устройства');
+      }
+    });
+  };
+
   const handleApproveRegistration = (request) => {
     const name = request.displayName || request.username || request.email;
     openConfirm(`Принять заявку ${name}?`, async () => {
@@ -454,12 +473,9 @@ const ChatsPage = () => {
               Выйти
             </button>
           </div>
-          {device && device.status === 'untrusted' && (
+          {device && device.status !== 'trusted' && (
             <div className="banner banner-warning" role="alert">
-              <div>
-                Это устройство не отмечено как доверенное. Для защиты будущего сквозного шифрования
-                подтвердите его в настройках устройств.
-              </div>
+              <div>{deviceBlockedNotice}</div>
               <button type="button" className="secondary-btn" onClick={() => navigate('/devices')}>
                 Открыть устройства
               </button>
@@ -520,6 +536,8 @@ const ChatsPage = () => {
             onUpdateModeration={(payload) => updateModeration(selectedChatId, payload)}
             auditLog={auditLogs[selectedChatId] || []}
             onLoadAudit={() => loadAudit(selectedChatId)}
+            canSendMessages={isDeviceTrusted}
+            blockedNotice={isDeviceTrusted ? '' : deviceBlockedNotice}
           />
         </div>
       )}
@@ -635,6 +653,7 @@ const ChatsPage = () => {
         registrationLoading={registrationLoading}
         onDisableUser={handleDisableUserAdmin}
         onEnableUser={handleEnableUserAdmin}
+        onAllowNextDevice={handleResetDeviceTrust}
         onApproveRequest={handleApproveRegistration}
         onRejectRequest={handleRejectRegistration}
         notice={managementNotice}

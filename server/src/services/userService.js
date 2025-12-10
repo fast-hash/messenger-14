@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { logEvent } = require('./auditLogService');
 
 const SALT_ROUNDS = 10;
 
@@ -22,6 +23,7 @@ const toUserDto = (userDoc) => ({
   accessDisabledAt: userDoc.accessDisabledAt || null,
   accessDisabledBy: userDoc.accessDisabledBy ? userDoc.accessDisabledBy.toString() : null,
   tokenVersion: userDoc.tokenVersion || 0,
+  forceTrustNextDevice: userDoc.forceTrustNextDevice || false,
 });
 
 const ensureUniqueUser = async ({ username, email }) => {
@@ -215,6 +217,27 @@ const enableUser = async ({ targetUserId }) => {
   return toUserDto(user);
 };
 
+const allowNextDeviceTrust = async ({ targetUserId, adminId, ipAddress }) => {
+  const user = await User.findById(targetUserId);
+  if (!user) {
+    const error = new Error('User not found');
+    error.status = 404;
+    throw error;
+  }
+
+  user.forceTrustNextDevice = true;
+  await user.save();
+
+  await logEvent({
+    actorId: adminId,
+    event: 'device_trust_reset',
+    ip: ipAddress || null,
+    deviceInfo: { targetUserId: user._id.toString() },
+  });
+
+  return toUserDto(user);
+};
+
 module.exports = {
   createUser,
   authenticateUser,
@@ -226,4 +249,5 @@ module.exports = {
   listAllUsers,
   disableUser,
   enableUser,
+  allowNextDeviceTrust,
 };

@@ -18,7 +18,7 @@ const toDeviceDto = (deviceDoc) => {
   };
 };
 
-const registerOrUpdateDevice = async ({ userId, device, ipAddress }) => {
+const registerOrUpdateDevice = async ({ userId, device, ipAddress, trustOnCreate = false, forceTrust = false }) => {
   const normalizedDeviceId = (device && device.deviceId) || null;
   if (!normalizedDeviceId) {
     const error = new Error('Device information is required');
@@ -42,6 +42,16 @@ const registerOrUpdateDevice = async ({ userId, device, ipAddress }) => {
     existing.platform = platform;
     existing.lastSeenAt = new Date();
     existing.ipAddress = ipAddress || existing.ipAddress || null;
+
+    if (forceTrust && existing.status !== 'trusted') {
+      existing.status = 'trusted';
+      await logEvent({
+        actorId: userId,
+        event: 'device_trusted',
+        ip: ipAddress || null,
+        deviceInfo: { name: existing.name, platform: existing.platform, id: existing.deviceId },
+      });
+    }
     await existing.save();
     return existing;
   }
@@ -51,7 +61,7 @@ const registerOrUpdateDevice = async ({ userId, device, ipAddress }) => {
     deviceId: normalizedDeviceId,
     name,
     platform,
-    status: 'untrusted',
+    status: trustOnCreate ? 'trusted' : 'untrusted',
     tokenVersion: 0,
     lastSeenAt: new Date(),
     ipAddress: ipAddress || null,
@@ -63,6 +73,15 @@ const registerOrUpdateDevice = async ({ userId, device, ipAddress }) => {
     ip: ipAddress || null,
     deviceInfo: { name, platform, id: normalizedDeviceId },
   });
+
+  if (trustOnCreate) {
+    await logEvent({
+      actorId: userId,
+      event: 'device_trusted',
+      ip: ipAddress || null,
+      deviceInfo: { name, platform, id: normalizedDeviceId },
+    });
+  }
 
   return newDevice;
 };
