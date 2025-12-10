@@ -1,24 +1,13 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
 const userService = require('../services/userService');
 const { getIo, updatePresenceMeta } = require('../sockets');
 const Chat = require('../models/Chat');
-const config = require('../config/env');
+const { setAuthCookie } = require('../utils/authCookie');
+const { toDeviceDto } = require('../services/deviceService');
 
 const router = express.Router();
-
-const setAuthCookie = (res, payload) => {
-  const tokenPayload = { ...payload, tokenVersion: payload.tokenVersion || 0 };
-  const token = jwt.sign(tokenPayload, config.jwtSecret, { expiresIn: '7d' });
-  res.cookie('access_token', token, {
-    httpOnly: true,
-    secure: config.cookieSecure,
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-};
 
 router.use(authMiddleware);
 
@@ -26,7 +15,7 @@ router.get(
   '/me',
   asyncHandler(async (req, res) => {
     const user = await userService.getUserById(req.user.id);
-    res.json({ user });
+    res.json({ user, device: toDeviceDto(req.device) });
   })
 );
 
@@ -40,7 +29,12 @@ router.patch(
       dndUntil,
     });
 
-    setAuthCookie(res, { ...user, tokenVersion: user.tokenVersion || 0 });
+    setAuthCookie(res, {
+      ...user,
+      tokenVersion: user.tokenVersion || 0,
+      deviceId: req.device ? req.device.deviceId : undefined,
+      deviceTokenVersion: req.device ? req.device.tokenVersion || 0 : undefined,
+    });
 
     const io = getIo && getIo();
     if (io) {

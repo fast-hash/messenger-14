@@ -35,7 +35,7 @@ import {
 
 const ChatsPage = () => {
   const navigate = useNavigate();
-  const { user, logout, dndEnabled, dndUntil, updatePreferences } = useAuthStore();
+  const { user, logout, dndEnabled, dndUntil, updatePreferences, device } = useAuthStore();
   const {
     chats,
     selectedChatId,
@@ -437,6 +437,14 @@ const ChatsPage = () => {
             <button
               type="button"
               className="secondary-btn"
+              onClick={() => navigate('/devices')}
+              style={{ marginRight: '0.5rem' }}
+            >
+              Устройства
+            </button>
+            <button
+              type="button"
+              className="secondary-btn"
               onClick={() => {
                 logout();
                 reset();
@@ -446,6 +454,17 @@ const ChatsPage = () => {
               Выйти
             </button>
           </div>
+          {device && device.status === 'untrusted' && (
+            <div className="banner banner-warning" role="alert">
+              <div>
+                Это устройство не отмечено как доверенное. Для защиты будущего сквозного шифрования
+                подтвердите его в настройках устройств.
+              </div>
+              <button type="button" className="secondary-btn" onClick={() => navigate('/devices')}>
+                Открыть устройства
+              </button>
+            </div>
+          )}
         </div>
       }
       sidebar={
