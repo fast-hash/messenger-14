@@ -7,6 +7,8 @@ const { registerOrUpdateDevice, toDeviceDto } = require('../services/deviceServi
 const { setAuthCookie } = require('../utils/authCookie');
 const { getRequestIp } = require('../utils/requestIp');
 const { logEvent } = require('../services/auditLogService');
+const Device = require('../models/Device');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -23,9 +25,31 @@ router.post(
   asyncHandler(async (req, res) => {
     const { device } = req.body || {};
     const user = await userService.authenticateUser(req.body || {});
+    const userRecord = await User.findById(user.id);
+
+    if (!userRecord) {
+      const error = new Error('Invalid credentials');
+      error.status = 401;
+      throw error;
+    }
 
     const ipAddress = getRequestIp(req);
-    const deviceRecord = await registerOrUpdateDevice({ userId: user.id, device, ipAddress });
+    const existingDevicesCount = await Device.countDocuments({ userId: userRecord._id });
+    const shouldForceTrust = Boolean(userRecord.forceTrustNextDevice);
+    const trustOnCreate = shouldForceTrust || existingDevicesCount === 0;
+
+    const deviceRecord = await registerOrUpdateDevice({
+      userId: user.id,
+      device,
+      ipAddress,
+      trustOnCreate,
+      forceTrust: shouldForceTrust,
+    });
+
+    if (shouldForceTrust && userRecord.forceTrustNextDevice) {
+      userRecord.forceTrustNextDevice = false;
+      await userRecord.save();
+    }
 
     setAuthCookie(res, {
       ...user,

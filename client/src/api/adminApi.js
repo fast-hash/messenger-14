@@ -15,6 +15,11 @@ export const enableUser = async (userId) => {
   return data;
 };
 
+export const resetDeviceTrust = async (userId) => {
+  const { data } = await httpClient.post(`/api/admin/users/${userId}/reset-device-trust`);
+  return data;
+};
+
 export const listRegistrationRequests = async () => {
   const { data } = await httpClient.get('/api/admin/registration-requests');
   return data;

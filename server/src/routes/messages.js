@@ -1,5 +1,6 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
+const requireTrustedDevice = require('../middleware/requireTrustedDevice');
 const asyncHandler = require('../utils/asyncHandler');
 const messageService = require('../services/messageService');
 const { getIo } = require('../sockets');
@@ -7,6 +8,7 @@ const { getIo } = require('../sockets');
 const router = express.Router();
 
 router.use(authMiddleware);
+router.use(requireTrustedDevice);
 
 // GET /api/messages?chatId=...
 router.get(

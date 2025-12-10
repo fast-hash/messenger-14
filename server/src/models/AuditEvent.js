@@ -10,7 +10,14 @@ const auditEventSchema = new mongoose.Schema(
     },
     event: {
       type: String,
-      enum: ['auth_login', 'auth_logout', 'device_new', 'device_revoked', 'device_trusted'],
+      enum: [
+        'auth_login',
+        'auth_logout',
+        'device_new',
+        'device_revoked',
+        'device_trusted',
+        'device_trust_reset',
+      ],
       required: true,
     },
     ip: {

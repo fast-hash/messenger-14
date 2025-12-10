@@ -125,6 +125,8 @@ const setupSockets = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
+    const isTrustedDevice = socket.device?.status === 'trusted';
+
     const incrementPresence = async () => {
       const current = onlineUsers.get(socket.user.id) || { count: 0 };
       const nextCount = (current.count || 0) + 1;
@@ -170,6 +172,9 @@ const setupSockets = (httpServer) => {
     socket.join(getUserRoom(socket.user.id));
 
     socket.on('chats:join', async ({ chatId }) => {
+      if (!isTrustedDevice) {
+        return;
+      }
       try {
         const chat = await Chat.findById(chatId);
         if (!chat) {
@@ -205,6 +210,12 @@ const setupSockets = (httpServer) => {
     });
 
     socket.on('message:send', async ({ chatId, text, mentions, attachments }, callback) => {
+      if (!isTrustedDevice) {
+        if (callback) {
+          callback({ ok: false, message: 'Device not trusted', status: 403 });
+        }
+        return;
+      }
       try {
         const message = await messageService.sendMessage({
           chatId,

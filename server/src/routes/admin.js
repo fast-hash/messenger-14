@@ -6,6 +6,7 @@ const chatService = require('../services/chatService');
 const userService = require('../services/userService');
 const registrationService = require('../services/registrationService');
 const { getIo, getUserRoom } = require('../sockets');
+const { getRequestIp } = require('../utils/requestIp');
 
 const router = express.Router();
 
@@ -54,6 +55,18 @@ router.post(
   '/users/:id/enable',
   asyncHandler(async (req, res) => {
     const user = await userService.enableUser({ targetUserId: req.params.id });
+    res.json({ user });
+  })
+);
+
+router.post(
+  '/users/:id/reset-device-trust',
+  asyncHandler(async (req, res) => {
+    const user = await userService.allowNextDeviceTrust({
+      targetUserId: req.params.id,
+      adminId: req.user.id,
+      ipAddress: getRequestIp(req),
+    });
     res.json({ user });
   })
 );

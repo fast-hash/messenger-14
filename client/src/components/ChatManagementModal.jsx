@@ -46,6 +46,7 @@ const ChatManagementModal = ({
   registrationLoading,
   onDisableUser,
   onEnableUser,
+  onAllowNextDevice,
   onApproveRequest,
   onRejectRequest,
   notice,
@@ -169,8 +170,14 @@ const ChatManagementModal = ({
                       <div className="group-card__meta">{item.email}</div>
                       <div className="group-card__meta">{formatRole(item.role)} · {item.department || 'Отдел не указан'}</div>
                       <div className="group-card__meta">Статус: {item.accessDisabled ? 'Доступ ограничен' : 'Активен'}</div>
+                      {item.forceTrustNextDevice && (
+                        <div className="group-card__meta">Следующее устройство будет доверенным автоматически</div>
+                      )}
                     </div>
                     <div className="btn-row">
+                      <button type="button" className="secondary-btn" onClick={() => onAllowNextDevice(item)}>
+                        Сброс доверия
+                      </button>
                       {item.accessDisabled ? (
                         <button type="button" className="primary-btn" onClick={() => onEnableUser(item)}>
                           Вернуть доступ
@@ -238,6 +245,7 @@ ChatManagementModal.propTypes = {
   registrationLoading: PropTypes.bool,
   onDisableUser: PropTypes.func,
   onEnableUser: PropTypes.func,
+  onAllowNextDevice: PropTypes.func,
   onApproveRequest: PropTypes.func,
   onRejectRequest: PropTypes.func,
   notice: PropTypes.string,
@@ -257,6 +265,7 @@ ChatManagementModal.defaultProps = {
   registrationLoading: false,
   onDisableUser: () => {},
   onEnableUser: () => {},
+  onAllowNextDevice: () => {},
   onApproveRequest: () => {},
   onRejectRequest: () => {},
   notice: '',

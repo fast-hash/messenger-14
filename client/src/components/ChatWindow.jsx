@@ -114,6 +114,8 @@ const ChatWindow = ({
   onUpdateModeration,
   auditLog,
   onLoadAudit,
+  canSendMessages,
+  blockedNotice,
 }) => {
   const listRef = useRef(null);
   const typingTimer = useRef(null);
@@ -141,6 +143,9 @@ const ChatWindow = ({
   const [rateLimitTick, setRateLimitTick] = useState(0);
 
   const mentionPopoverRef = useRef(null);
+
+  const messagingAllowed = canSendMessages !== false;
+  const blockedNoticeText = blockedNotice || '';
 
   // Safe aliases (не падать на медленной загрузке данных)
   const chatId = (chat?.id || chat?._id || '').toString();
@@ -375,6 +380,10 @@ const ChatWindow = ({
       : '';
 
   const bottomNotice = useMemo(() => {
+    if (!messagingAllowed) {
+      return blockedNoticeText || 'Отправка сообщений с этого устройства временно заблокирована.';
+    }
+
     if (isRemovedFromGroup) {
       return 'Вы удалены из этой группы. Вы можете просматривать историю сообщений, но отправка новых сообщений недоступна.';
     }
@@ -398,7 +407,18 @@ const ChatWindow = ({
     }
 
     return '';
-  }, [chatBlocked, isBlockedByMe, isBlockedMe, isRemovedFromGroup, chatType, isMuted, muteUntilText, canManageGroup]);
+  }, [
+    blockedNoticeText,
+    messagingAllowed,
+    chatBlocked,
+    isBlockedByMe,
+    isBlockedMe,
+    isRemovedFromGroup,
+    chatType,
+    isMuted,
+    muteUntilText,
+    canManageGroup,
+  ]);
 
   const pinnedSet = useMemo(
     () => new Set((pinnedMessageIds || []).map((x) => x?.toString?.() || x)),
@@ -442,6 +462,7 @@ const ChatWindow = ({
   }, [participants, chatType, typingUsers, otherUser, otherUserId, isRemovedFromGroup, chatBlocked]);
 
   const handleInputChange = (value) => {
+    if (!messagingAllowed) return;
     setMessageText(value);
     const hasText = value.trim().length > 0;
 
@@ -464,6 +485,13 @@ const ChatWindow = ({
   };
 
   const handleSend = async () => {
+    if (!messagingAllowed) {
+      if (blockedNoticeText) {
+        // eslint-disable-next-line no-alert
+        alert(blockedNoticeText);
+      }
+      return;
+    }
     const trimmed = messageText.trim();
     const hasAttachments = pendingAttachments.length > 0;
     if (!trimmed && !hasAttachments) return;
@@ -1138,7 +1166,7 @@ const ChatWindow = ({
               value={messageText}
               onChange={handleInputChange}
               onSend={handleSend}
-              disabled={!socketConnected || uploadingAttachments || isRateLimited}
+              disabled={!socketConnected || uploadingAttachments || isRateLimited || !messagingAllowed}
               onAttach={() => fileInputRef.current?.click()}
             />
           </>
@@ -1268,6 +1296,8 @@ ChatWindow.propTypes = {
     })
   ),
   onLoadAudit: PropTypes.func,
+  canSendMessages: PropTypes.bool,
+  blockedNotice: PropTypes.string,
 };
 
 ChatWindow.defaultProps = {
@@ -1294,6 +1324,8 @@ ChatWindow.defaultProps = {
   onUpdateModeration: () => {},
   auditLog: [],
   onLoadAudit: () => {},
+  canSendMessages: true,
+  blockedNotice: '',
 };
 
 export default ChatWindow;
