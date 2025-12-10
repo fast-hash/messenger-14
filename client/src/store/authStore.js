@@ -7,25 +7,41 @@ export const useAuthStore = create((set) => ({
   loading: true,
   dndEnabled: false,
   dndUntil: null,
+  device: null,
   async fetchCurrentUser() {
     try {
-      const { user } = await usersApi.currentUser();
-      set({ user, loading: false, dndEnabled: user.dndEnabled || false, dndUntil: user.dndUntil || null });
+      const { user, device } = await usersApi.currentUser();
+      set({
+        user,
+        loading: false,
+        dndEnabled: user.dndEnabled || false,
+        dndUntil: user.dndUntil || null,
+        device: device || null,
+      });
     } catch (error) {
-      set({ user: null, loading: false, dndEnabled: false, dndUntil: null });
+      set({ user: null, loading: false, dndEnabled: false, dndUntil: null, device: null });
     }
   },
   async login(credentials) {
-    const { user } = await authApi.login(credentials);
-    set({ user, dndEnabled: user.dndEnabled || false, dndUntil: user.dndUntil || null });
+    const { user, device } = await authApi.login(credentials);
+    set({
+      user,
+      dndEnabled: user.dndEnabled || false,
+      dndUntil: user.dndUntil || null,
+      device: device || null,
+    });
   },
   async register(payload) {
     const data = await authApi.register(payload);
     return data;
   },
   async logout() {
-    await authApi.logout();
-    set({ user: null, dndEnabled: false, dndUntil: null });
+    try {
+      await authApi.logout();
+    } catch (e) {
+      // ignore logout errors (e.g., expired session)
+    }
+    set({ user: null, dndEnabled: false, dndUntil: null, device: null });
   },
   async updatePreferences(preferences) {
     const { user } = await usersApi.updatePreferences(preferences);

@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatsPage from './pages/ChatsPage';
+import DevicesPage from './pages/DevicesPage';
 import { useAuthStore } from './store/authStore';
 import { initNotificationSound } from './utils/notifications';
 import './styles.css';
@@ -28,6 +29,7 @@ const AppContent = () => {
         element={!user ? <RegisterPage onRegister={register} /> : <Navigate to="/chats" replace />}
       />
       <Route path="/chats" element={user ? <ChatsPage /> : <Navigate to="/login" replace />} />
+      <Route path="/devices" element={user ? <DevicesPage /> : <Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to={user ? '/chats' : '/login'} replace />} />
     </Routes>
   );

@@ -13,7 +13,7 @@ const httpClient = axios.create({
 httpClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error?.response?.status === 401) {
+    if (error?.response?.status === 401 && !error?.config?.url?.includes('/api/auth/logout')) {
       try {
         const { useAuthStore } = await import('../store/authStore');
         const { logout } = useAuthStore.getState();

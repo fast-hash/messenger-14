@@ -4,6 +4,7 @@ const config = require('../config/env');
 const Chat = require('../models/Chat');
 const User = require('../models/User');
 const messageService = require('../services/messageService');
+const { findDeviceForUser } = require('../services/deviceService');
 
 const onlineUsers = new Map();
 const activeCalls = new Map();
@@ -86,6 +87,21 @@ const setupSockets = (httpServer) => {
         return next(new Error('Authentication failed'));
       }
 
+      const deviceId = payload.deviceId;
+      if (!deviceId) {
+        return next(new Error('Authentication failed'));
+      }
+
+      const device = await findDeviceForUser({ userId: user._id, deviceId });
+      if (!device || device.status === 'revoked') {
+        return next(new Error('Authentication failed'));
+      }
+
+      const deviceTokenVersion = typeof payload.deviceTokenVersion === 'number' ? payload.deviceTokenVersion : 0;
+      if (deviceTokenVersion !== (device.tokenVersion || 0)) {
+        return next(new Error('Authentication failed'));
+      }
+
       socket.user = {
         id: user._id.toString(),
         email: user.email,
@@ -96,6 +112,11 @@ const setupSockets = (httpServer) => {
         jobTitle: user.jobTitle,
         dndEnabled: user.dndEnabled || false,
         dndUntil: user.dndUntil || null,
+      };
+      socket.device = {
+        id: device._id.toString(),
+        deviceId: device.deviceId,
+        status: device.status,
       };
       return next();
     } catch (error) {
